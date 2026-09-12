@@ -1,26 +1,23 @@
+
 # Phase 1 — Data Synthesis Module
 
-## HR Analytics Data Warehouse Project
+## Enterprise HR Analytics Data Warehouse
 
 ### Overview
 
-This module synthesizes a realistic enterprise-scale HR operational dataset from the IBM HR Employee Attrition dataset. Since the original dataset contains only a single snapshot of employee information, the synthesis pipeline generates historical employee records (SCD Type 2), synthetic employee identities, enterprise projects, employee-project assignments, and controlled dirty data for ETL validation.
-
-The output forms the **OLTP source system** for the Greenfield HR Analytics Data Warehouse and models a **100,000 employee organization**.
+This module transforms the IBM HR Analytics dataset (1,470 records) into a realistic **100,000+ employee** enterprise operational dataset. It generates historical employee records using **SCD Type 2**, enterprise projects, project assignments, and annual performance reviews to serve as the **OLTP source** for the data warehouse.
 
 ---
 
 ## Objectives
 
-- Preserve all original IBM HR attributes.
-- Generate **100,000 unique employees**.
-- Create realistic employee identities.
-- Engineer historical employee versions using **SCD Type 2**.
-- Generate an enterprise project portfolio.
-- Allocate employees across **1–3 concurrent projects**.
-- Maintain realistic bench utilization (≈2–3%).
-- Inject controlled dirty data for ETL testing.
-- Validate employee, project, and assignment integrity before database loading.
+- Scale IBM HR dataset to **100,000 employees**
+- Generate synthetic employee identities
+- Implement **SCD Type 2** employee history
+- Create enterprise projects and assignments
+- Generate annual performance reviews (2023–2025)
+- Maintain realistic bench utilization (~2.5%)
+- Validate all business rules before database loading
 
 ---
 
@@ -28,242 +25,85 @@ The output forms the **OLTP source system** for the Greenfield HR Analytics Data
 
 ```text
 mini-project-greenfield/
-│
+
 ├── data/
 │   ├── raw/
-│   │   └── WA_Fn-UseC_-HR-Employee-Attrition.csv
-│   │
 │   └── processed/
 │       ├── employee_synthesized.csv
 │       ├── projects.csv
 │       ├── assignments.csv
-│       └── test_dataset.csv
+│       └── performance_reviews.csv
 │
 └── synthesizer/
-    ├── __init__.py
-    ├── config.py
     ├── employee_generator.py
     ├── scd_generator.py
     ├── dirty_data.py
     ├── project_generator.py
     ├── assignment_generator.py
+    ├── review_generator.py
     ├── generate_data.py
     ├── generate_projects.py
     ├── validate_dataset.py
-    └── validate_projects.py
+    ├── validate_projects.py
+    └── validate_reviews.py
 ```
 
 ---
 
-## Pipeline Workflow
+## Data Pipeline
 
 ```text
 IBM HR Dataset
-        │
-        ▼
+      │
+      ▼
 Employee Generator
-        │
-        ▼
+      ▼
 SCD Type 2 Generator
-        │
-        ▼
-Dirty Data Injector
-        │
-        ├────────────► employee_synthesized.csv
-        │
-        ▼
+      ▼
+Dirty Data Injection
+      ├── employee_synthesized.csv
+      ▼
 Project Generator
-        │
-        ▼
+      ▼
 Assignment Generator
-        │
-        ▼
+      ├── projects.csv
+      ├── assignments.csv
+      ▼
+Review Generator
+      └── performance_reviews.csv
+      ▼
 Validation
-        │
-        ├────────────► projects.csv
-        └────────────► assignments.csv
 ```
 
-The employee dataset is generated first and becomes the workforce source for project and assignment synthesis.
-
 ---
 
-## Module Responsibilities
+## Modules
 
-### employee_generator.py
-
-Generates synthetic employee identities while preserving every IBM HR attribute.
-
-**Generated fields**
-
-- EmployeeID
-- FirstName
-- LastName
-- Email
-- Phone
-- HireDate
-
----
-
-### scd_generator.py
-
-Creates historical employee records using **Slowly Changing Dimension Type 2**.
-
-Business events include:
-
-- Promotion
-- Salary revision
-- Department transfer
-- Job role change
-
-Additional fields:
-
-| Column | Description |
+| Module | Responsibility |
 |---|---|
-| StartDate | Version effective date |
-| EndDate | Version expiry date |
-| IsCurrent | Current version flag |
-
-Each employee has **exactly one current record**.
-
----
-
-### dirty_data.py
-
-Injects approximately **5%** controlled data quality issues.
-
-Supported dirty data includes:
-
-- NULL Salary
-- Negative Salary
-- NULL Email
-- Invalid Gender
-- Bad Department
-- Age Outlier
-- Duplicate Email
-- Trailing Spaces
-
-Each employee receives **at most one** dirty data issue.
+| `employee_generator.py` | Generate employee identity |
+| `scd_generator.py` | SCD Type 2 history |
+| `dirty_data.py` | Controlled dirty data |
+| `project_generator.py` | Enterprise projects |
+| `assignment_generator.py` | Employee allocations |
+| `review_generator.py` | Annual performance reviews |
+| `validate_*` | Business rule validation |
 
 ---
 
-### project_generator.py
+# Dataset Statistics
 
-Generates a realistic enterprise project portfolio.
-
-Each project contains:
-
-| Attribute | Description |
-|---|---|
-| ProjectID | Unique project identifier |
-| ProjectName | Synthetic project name |
-| Client | Client organization |
-| Priority | High / Medium / Low |
-| Budget | Project budget |
-| Status | Active / On Hold / Completed |
-| StartDate | Project start date |
-| EndDate | Planned end date |
-| RequiredHeadcount | Workforce demand |
-
-Projects are generated independently and later populated through employee assignments.
-
----
-
-### assignment_generator.py
-
-Implements an **employee-first resource allocation algorithm**.
-
-Business rules:
-
-- Employees work on **1–3 concurrent projects**
-- Total allocation always equals **100%**
-- Approximately **2–3%** employees remain on bench
-- No duplicate employee-project assignments
-- Active assignments have NULL EndDate
-- Completed assignments retain historical EndDate
-
-Typical allocation patterns:
-
-| Projects | Allocation |
-|---|---|
-| 1 | 100 |
-| 2 | 60/40, 50/50, 70/30 |
-| 3 | 50/30/20, 40/30/30 |
-
----
-
-### generate_data.py
-
-Main employee synthesis orchestration.
-
-Responsibilities:
-
-1. Load IBM dataset
-2. Generate employee identities
-3. Create SCD history
-4. Inject dirty data
-5. Export employee dataset
-
----
-
-### generate_projects.py
-
-Main project synthesis orchestration.
-
-Responsibilities:
-
-1. Load current employees
-2. Generate projects
-3. Generate assignments
-4. Export project datasets
-
----
-
-### validate_dataset.py
-
-Validates employee synthesis.
-
-Checks:
-
-- Row count
-- Column count
-- SCD distribution
-- Exactly one current record
-- Date integrity
-- Dirty data distribution
-- One dirty issue per employee
-
----
-
-### validate_projects.py
-
-Validates project and assignment datasets.
-
-Checks:
-
-- Referential integrity
-- Duplicate assignments
-- Allocation = 100%
-- Bench utilization
-- Project staffing balance
-- Historical assignment dates
-- Active assignment rules
-
----
-
-## Final Dataset Statistics
-
-### Employee Dataset
+### Employees
 
 | Metric | Value |
 |---|---:|
-| Synthetic Employees | 100,000 |
+| Employees | **100,000** |
 | Total Records | **120,384** |
-| Current Records | 100,000 |
 | Historical Records | 20,384 |
-| Total Columns | **44** |
+| Current Records | 100,000 |
+| Columns | 44 |
 
-### Project Dataset
+### Projects
 
 | Metric | Value |
 |---|---:|
@@ -272,133 +112,103 @@ Checks:
 | On Hold | 141 |
 | Completed | 450 |
 
-### Assignment Dataset
+### Assignments
 
 | Metric | Value |
 |---|---:|
 | Total Assignments | **182,299** |
-| Active Assignments | 136,617 |
-| Historical Assignments | 45,682 |
+| Active | 136,617 |
+| Historical | 45,682 |
 | Bench Employees | **2,493 (2.49%)** |
 
-### Active Workload Distribution
+### Performance Reviews
 
-| Concurrent Projects | Employees |
+| Metric | Value |
 |---|---:|
-| 1 Project | 67,220 |
-| 2 Projects | 21,464 |
-| 3 Projects | 8,823 |
+| Total Reviews | **266,131** |
+| Employees Reviewed | **100,000** |
+| Review Years | 2023–2025 |
 
 ---
 
-## Employee Validation Results
+# Validation Results
+
+### Employee & SCD Validation
 
 ```text
-==================================================
-DATASET VALIDATION
-==================================================
-
-Rows    : 120384
-Columns : 44
-
-SCD Distribution
-1 -> 79,616
-2 -> 20,384
-
-Employees without exactly one current record : 0
-Current rows with EndDate filled            : 0
-Historic rows with NULL EndDate             : 0
-Invalid date ranges                        : 0
-
-Dirty Data Summary
-NULL Salary       : 619
-Negative Salary   : 620
-NULL Email        : 617
-Bad Department    : 625
-Invalid Gender    : 680
-Age Outliers      : 645
-Duplicate Emails  : 453
-Multiple dirty issues/employee : 0
-
 PASS
+
+Rows                     : 120,384
+Exactly one current row  : ✓
+Invalid date ranges      : 0
+Multiple dirty issues    : 0
 ```
 
----
-
-## Project & Assignment Validation Results
+### Project & Assignment Validation
 
 ```text
-============================================================
-PROJECT DATA VALIDATION
-============================================================
+PASS
 
-Projects          : 1,000
-Assignments       : 182,299
-Current Employees : 100,000
-
-Integrity Checks
 Invalid Employee IDs : 0
 Invalid Project IDs  : 0
 Allocation Errors    : 0
-Bench Employees      : 2,493
 Duplicate Records    : 0
+Bench Employees      : 2,493
+```
 
-Business Rule Checks
-Completed Ending Future : 0
-Active Already Ended    : 0
-Completed Missing End   : 0
-Assigned Has End Date   : 0
+### Performance Review Validation
 
-Projects per Employee
-1 -> 67,220
-2 -> 21,464
-3 -> 8,823
-
-Active Project Staffing
-Understaffed : 68
-Balanced     : 304
-Overstaffed  : 37
-
+```text
 PASS
+
+Duplicate Review IDs              : 0
+Duplicate Annual Reviews          : 0
+Invalid Employee IDs             : 0
+Invalid Performance Scores        : 0
+Reviews Before Hire Date          : 0
+Incorrect Review Counts           : 0
+Unrealistic Score Jumps           : 0
+Reviews Outside Employment Period : 0
+
+Employees Validated : 100,000
+Reviews Validated   : 266,131
 ```
 
 ---
 
-## Business Rules Implemented
+# Business Rules
 
-| Rule | Status |
-|---|---|
-| Exactly one current employee record | ✓ |
-| SCD Type 2 maintained | ✓ |
-| Employees assigned to 1–3 projects | ✓ |
-| Allocation totals 100% | ✓ |
-| Bench workforce maintained | ✓ |
-| No duplicate employee-project records | ✓ |
-| Active assignments have NULL EndDate | ✓ |
-| Completed assignments retain EndDate | ✓ |
-| Realistic staffing variation for analytics | ✓ |
+- Exactly one **current** employee record
+- SCD Type 2 history maintained
+- Employees assigned to **1–3 projects**
+- Allocation totals **100%**
+- Bench utilization maintained (~2.5%)
+- No duplicate employee–project assignments
+- Active assignments have `NULL` EndDate
+- One performance review per employee per year
+- Reviews occur only after hire date
+- Reviews fall within valid SCD employment periods
 
 ---
 
-## Technologies Used
+# Technologies
 
-- Python 3.11+
+- Python 3.11
 - Pandas
 - Faker
-- pathlib
 - Object-Oriented Programming (OOP)
 
 ---
 
-## Output
-
-Generated datasets:
+# Outputs
 
 ```text
 data/processed/
+
 ├── employee_synthesized.csv
 ├── projects.csv
-└── assignments.csv
+├── assignments.csv
+└── performance_reviews.csv
 ```
 
-These datasets serve as the operational source for **Phase 2: MySQL OLTP Database & ETL Pipeline**.
+These datasets serve as the source for **Phase 2: MySQL OLTP, ETL, and OLAP Star Schema**.
