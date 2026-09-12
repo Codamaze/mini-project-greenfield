@@ -74,24 +74,38 @@ class DirtyDataInjector:
 
             dirty_df = df.copy()
 
-            dirty_rows = max(
+            # Number of employees to corrupt (not rows)
+            dirty_employees = max(
                 len(self.issue_types),
-                int(len(dirty_df) * self.dirty_percent)
+                int(dirty_df["EmployeeID"].nunique() * self.dirty_percent)
             )
 
-            available_rows = list(dirty_df.index)
-            random.shuffle(available_rows)
+            # Select unique employees
+            employee_ids = dirty_df["EmployeeID"].drop_duplicates().tolist()
+            random.shuffle(employee_ids)
 
-            selected_rows = available_rows[:dirty_rows]
+            selected_employees = employee_ids[:dirty_employees]
 
-            # ---------- Guarantee every issue once ----------
-            for idx, issue in zip(selected_rows, self.issue_types):
+            # -------- Guarantee every issue once --------
+            for emp_id, issue in zip(selected_employees, self.issue_types):
+
+                idx = dirty_df[
+                    (dirty_df["EmployeeID"] == emp_id) &
+                    (dirty_df["IsCurrent"] == 1)
+                ].index[0]
+
                 self._apply_issue(dirty_df, idx, issue)
 
-            # ---------- Remaining rows receive random issues ----------
-            remaining = selected_rows[len(self.issue_types):]
+            # -------- Remaining employees receive one random issue --------
+            remaining_employees = selected_employees[len(self.issue_types):]
 
-            for idx in remaining:
+            for emp_id in remaining_employees:
+
+                idx = dirty_df[
+                    (dirty_df["EmployeeID"] == emp_id) &
+                    (dirty_df["IsCurrent"] == 1)
+                ].index[0]
+
                 issue = random.choice(self.issue_types)
                 self._apply_issue(dirty_df, idx, issue)
 
