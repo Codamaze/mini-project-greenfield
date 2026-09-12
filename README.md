@@ -1,4 +1,4 @@
-# mini-project-greenfield(team 6)
+# mini-project-greenfield (Team 6)
 # HR Analytics Data Warehouse
 
 A complete end-to-end **HR Analytics Data Engineering** project that transforms the IBM HR Employee Attrition dataset into a scalable **OLTP + OLAP** data warehouse using ETL pipelines, SCD Type 2 implementation, and an interactive Streamlit dashboard.
