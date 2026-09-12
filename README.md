@@ -106,10 +106,10 @@ mini-project-greenfield/
 
 Detailed implementation is available in the `docs/` directory:
 
-- `docs/data_synthesis.md`
-- `docs/etl.md`
-- `docs/oltp.md`
-- `docs/olap.md`
+- `documentation/data_synthesis.md`
+- `documentation/etl.md`
+- `documentation/oltp.md`
+- `documentation/olap.md`
 
 ---
 
